@@ -91,8 +91,8 @@ Create `.vscode/mcp.json` in your project:
 ### Try It Out
 
 1. Start the MCP server in your agent
-2. **Recommended**: Run the `/init-skills` prompt to teach the agent the full workflow (run at the start of each session)
-3. **Alternative**: Ask the agent to call `list_skills` to see available tools
+2. **Recommended**: Run the `/init-skills` prompt at the start of each session to provide background guidance on the Skills MCP workflow
+3. **Alternative**: Simply ask the agent to complete a task—it will discover and use skills when needed
 
 That's it! Your agent can now discover and use skills.
 
@@ -325,14 +325,21 @@ Retrieves the full skill content and absolute path.
 
 ### `init-skills`
 
-A prompt that provides instructions for working with the Skills MCP Server. Use this at the start of a conversation to initialize skill awareness.
+Provides informational guidance about the Skills MCP workflow. This prompt:
+
+- Explains what skills are and how they're structured
+- Outlines the progressive disclosure model (load only what you need, when you need it)
+- Describes the step-by-step workflow for discovering, loading, and using skills
+- Clarifies that the MCP is a minimal wrapper—agents handle all file operations
+
+**When to use**: Run at the start of a conversation to provide background context. The prompt is informational only—it doesn't trigger any immediate actions. Agents will use skills when they encounter tasks that match available skill descriptions.
 
 </details>
 
 <details>
 <summary><strong>How It Works</strong></summary>
 
-The Skills MCP Server follows a **minimal wrapper design** that leverages the full capabilities of modern AI agents:
+The Skills MCP follows a **minimal wrapper design** that leverages the full capabilities of modern AI agents:
 
 **What the server provides:**
 

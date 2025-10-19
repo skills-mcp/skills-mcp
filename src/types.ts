@@ -26,7 +26,7 @@ export interface SkillEntry {
 }
 
 /**
- * Configuration for the Skills MCP Server
+ * Configuration for the Skills MCP
  */
 export interface SkillsConfig {
   skillsDirs: string[]

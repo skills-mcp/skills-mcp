@@ -45,7 +45,7 @@ async function main() {
   }
 
   // Log startup information (to stderr to not interfere with stdio transport)
-  console.error(`Skills MCP Server starting...`)
+  console.error(`Skills MCP starting...`)
   console.error(`Skills directories:`)
   skillsDirs.forEach((dir) => console.error(`  - ${dir}`))
 

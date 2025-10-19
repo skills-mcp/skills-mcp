@@ -8,7 +8,7 @@ Anthropic designed Skills as a portable, convention-based format for specialized
 
 ### Design Philosophy
 
-**Core principle**: The Skills MCP Server is a minimal wrapper that offloads as much responsibility as possible to the consuming AI agent. Modern AI agents already have robust capabilities for reading files, executing scripts, searching code, and running shell commands. The Skills MCP should leverage these existing capabilities rather than duplicating them.
+**Core principle**: The Skills MCP is a minimal wrapper that offloads as much responsibility as possible to the consuming AI agent. Modern AI agents already have robust capabilities for reading files, executing scripts, searching code, and running shell commands. The Skills MCP should leverage these existing capabilities rather than duplicating them.
 
 **What the Skills MCP provides**:
 
@@ -34,7 +34,7 @@ Anthropic designed Skills as a portable, convention-based format for specialized
 
 This design keeps the MCP server focused and simple while leveraging the full power of modern AI agents.
 
-While Claude has native Skills support, the Skills MCP Server enables:
+While Claude has native Skills support, the Skills MCP enables:
 
 - **Universal agent compatibility**: Any agent with MCP support can access skills
 - **Unified skill management**: Single skills folder works across all agents and platforms
@@ -305,11 +305,11 @@ This environment enables the filesystem-based architecture and progressive discl
 
 ---
 
-## Skills MCP Server Architecture
+## Skills MCP Architecture
 
 ### Discovery and Registration
 
-The Skills MCP Server will:
+The Skills MCP will:
 
 1. **Scan**: Monitor a designated skills directory (e.g., `~/.claude/skills/`)
 2. **Parse**: Read SKILL.md files and extract YAML frontmatter
@@ -318,7 +318,7 @@ The Skills MCP Server will:
 
 ### MCP Tool Mapping
 
-The Skills MCP Server exposes two core tools:
+The Skills MCP exposes two core tools:
 
 **`list_skills`**: Discovery tool that returns metadata for all available skills
 
@@ -438,7 +438,7 @@ Anthropic provides pre-built Agent Skills for common document tasks:
 - **Word (docx)**: Create documents, edit content, format text
 - **PDF (pdf)**: Generate formatted PDF documents and reports
 
-These Skills demonstrate the format and patterns that custom Skills should follow. The Skills MCP Server should be able to load and expose these pre-built Skills alongside custom ones.
+These Skills demonstrate the format and patterns that custom Skills should follow. The Skills MCP should be able to load and expose these pre-built Skills alongside custom ones.
 
 ---
 
@@ -480,7 +480,7 @@ These Skills demonstrate the format and patterns that custom Skills should follo
 
 ### Package Dependencies
 
-**Decision**: The Skills MCP Server assumes necessary packages are already installed in the runtime environment.
+**Decision**: The Skills MCP assumes necessary packages are already installed in the runtime environment.
 
 **Rationale**: Package management is outside the scope of this MCP server. Skills run in environments where the agent already has access to required packages (Python, Node.js, etc.). The skill documentation should specify required packages, but installation is the responsibility of the environment setup, not the MCP server.
 
@@ -540,7 +540,7 @@ These Skills demonstrate the format and patterns that custom Skills should follo
 **Rationale**:
 
 - AI agents already have tools for reading, writing, and searching files
-- The Skills MCP server is a minimal wrapper providing skills-specific context
+- The Skills MCP is a minimal wrapper providing skills-specific context
 - Adding file operation tools duplicates existing agent capabilities
 - Providing absolute paths in `get_skill` enables agents to resolve relative references
 - Keep the MCP server focused on skill discovery and access, not general file operations
@@ -549,7 +549,7 @@ These Skills demonstrate the format and patterns that custom Skills should follo
 
 ### Design Philosophy
 
-**Core principle**: The Skills MCP Server is a minimal wrapper that exposes Anthropic's Skills format via MCP tools. It offloads as much responsibility as possible to the consuming AI agent, providing only the essential functionality needed to enable skills behavior.
+**Core principle**: The Skills MCP is a minimal wrapper that exposes Anthropic's Skills format via MCP tools. It offloads as much responsibility as possible to the consuming AI agent, providing only the essential functionality needed to enable skills behavior.
 
 Modern AI agents already have robust capabilities for reading files, executing scripts, searching code, and running shell commands. The Skills MCP should leverage these existing capabilities rather than duplicating them.
 
@@ -605,7 +605,7 @@ No additional MCP tools needed—the agent handles everything using its existing
 
 ## MCP Tools Design
 
-The Skills MCP Server exposes two core tools that provide the minimal functionality needed for skills behavior:
+The Skills MCP exposes two core tools that provide the minimal functionality needed for skills behavior:
 
 ### `list_skills`
 
@@ -707,55 +707,116 @@ Retrieves the full SKILL.md content for a specific skill with its absolute path 
 
 ## MCP Prompts
 
-The Skills MCP Server can optionally expose an MCP prompt to initialize skill-aware conversations:
+The Skills MCP exposes an MCP prompt to provide background guidance about the skills workflow:
 
 ### `init-skills` Prompt
 
-A slash command that provides instructions for working with the Skills MCP Server.
+A prompt that provides informational guidance about working with the Skills MCP. This prompt is designed to be run at the start of a conversation to establish context without triggering immediate actions.
 
 **Usage**: `/init-skills` or similar
 
-**Content**:
+**Design Goals**:
+
+- **Informational, not directive**: Provides background context rather than action directives
+- **Progressive disclosure emphasis**: Clearly communicates that skills should only be loaded when needed for specific tasks
+- **Task-centric language**: Uses "task or objective" rather than "user request" to encompass both explicit user requests and autonomous agentic workflows
+- **Minimal wrapper philosophy**: Makes clear that the MCP only provides discovery and content access; agents handle all file operations
+
+**Content** (current implementation in `src/server.ts`):
 
 ````markdown
-You have access to a Skills MCP Server that provides specialized expertise through Agent Skills.
+# Skills MCP - Usage Guide
 
-Skills are organized, self-contained packages with:
+This is informational guidance about the Skills MCP. Do not take any action based on this message alone. Wait for a specific task or objective before using skills.
 
-- **Instructions** (SKILL.md) - procedural knowledge for specific domains
-- **References** - documentation loaded as needed
-- **Scripts** - executable code you can run with bash tools
-- **Assets** - templates and files for output
+## What Are Skills?
 
-## Using Skills
+Skills are self-contained packages that provide you with specialized expertise for specific domains or tasks. Each skill contains:
 
-1. **Discover**: Call `list_skills` to see available skills and their descriptions
-2. **Load**: When a skill matches the user's request, call `get_skill` to load its instructions and get the absolute path to the skill file
-3. **Follow**: Read and follow the instructions in the skill content
-4. **Access resources**: The skill may reference additional files like `references/FORMS.md` or `scripts/validate.py`
-   - Use the absolute path from `get_skill` (e.g., `/path/to/skill/SKILL.md`) to construct full paths
-   - Example: If path is `/path/to/pdf-processing/SKILL.md` and skill references `references/FORMS.md`, read `/path/to/pdf-processing/references/FORMS.md`
-5. **Execute scripts**: Use your bash tool with the skill directory path
-   - Example: `cd /path/to/pdf-processing && python scripts/validate.py`
+- **Instructions** (SKILL.md) - procedural knowledge and workflows
+- **References** - documentation you can read as needed
+- **Scripts** - executable code you can run using bash
+- **Assets** - templates and files for output generation
 
-## Important
+## Core Design Philosophy
 
-The Skills MCP provides skill discovery and content. You handle all file operations (reading references, executing scripts, navigating directories) using your existing tools. The absolute path in `get_skill` enables you to resolve any relative references within the skill.
+The Skills MCP is a minimal wrapper that provides skill discovery and content access. You are responsible for all file operations:
 
-## Example Workflow
+- **The MCP provides**: Skill metadata, SKILL.md content, and absolute file paths
+- **You handle**: Reading referenced files, executing scripts, navigating directories using your existing tools
 
-**MANDATORY - READ ENTIRE FILE**: Some skills explicitly direct you to read referenced files completely. For example:
+The absolute path returned by `get_skill` enables you to resolve any relative references within the skill.
 
-```markdown
-Workflow MANDATORY - READ ENTIRE FILE: references/complete-guide.md
+## When to Use Skills
+
+Skills follow a **progressive disclosure model**. Only load content when it's needed to accomplish a task:
+
+1. **Call `list_skills`** when you need to discover what skills are available (typically when a task might benefit from specialized expertise)
+2. **Call `get_skill`** only when a skill matches the specific task or objective at hand
+3. **Read referenced files** only when the skill instructions direct you to do so
+4. **Execute scripts** only when required by the workflow
+
+## Working with Skills
+
+### Step 1: Discovery
+
+Call `list_skills` to see available skills and their descriptions. Each skill description explains what it does and when to use it.
+
+### Step 2: Loading
+
+When a skill clearly matches the task at hand, call `get_skill` with the skill ID. This returns:
+
+- `path`: Absolute path to SKILL.md (e.g., `/path/to/skill/SKILL.md`)
+- `name`: Skill name
+- `description`: Skill description
+- `content`: Complete SKILL.md instructions
+
+### Step 3: Following Instructions
+
+Read and follow the instructions in the skill content. The skill will guide you through the workflow.
+
+### Step 4: Accessing Resources
+
+Skills may reference additional files like `references/guide.md` or `scripts/process.py`. To access these:
+
+1. Extract the directory path from the skill's absolute path
+   - Example: `/path/to/pdf-processing/SKILL.md` → `/path/to/pdf-processing/`
+2. Construct the full path to the referenced resource
+   - Example: `/path/to/pdf-processing/references/FORMS.md`
+3. Use your file-reading tools to access the file
+
+### Step 5: Executing Scripts
+
+When skills reference executable scripts, use your bash tool:
+
+```bash
+cd /path/to/skill-directory && python scripts/script_name.py
 ```
+
+## Important Notes
+
+### Resource Access
+
+All resource access (references, scripts, assets) is your responsibility using your existing file-reading and bash tools. The Skills MCP only provides the starting point (the SKILL.md path).
+
+### Progressive Loading
+
+Skills are designed to minimize context usage. Only load what you need, when you need it. Load skills when they match the task at hand, and read references only as directed by the skill instructions.
+
+---
+
+**Remember**: This is background information. Use skills when they align with the task or objective you're working on.
 ````
 
-When you see this pattern, use the skill's absolute path to construct the full path and read the entire referenced file before proceeding.
+**Key Refinements** (October 2025):
 
-```
+- **Opening statement**: Explicitly states this is informational guidance and not an action directive
+- **Task-centric**: Uses "task or objective" to include both user requests and agentic workflows
+- **Removed redundancy**: Consolidated progressive disclosure guidance into clear, non-repetitive sections
+- **Positive framing**: Final reminder uses positive language ("Use skills when...") rather than negative constraints
+- **Clarity over conciseness**: Prioritizes clear understanding over token minimization
 
-**Benefit**: Users can quickly initialize conversations with skill awareness, though this can also be added to system instructions.
+**Benefit**: Users can run this at the start of conversations to establish context, helping agents understand the skills workflow without triggering premature tool calls.
 
 ---
 
@@ -764,4 +825,3 @@ When you see this pattern, use the skill's absolute path to construct the full p
 - [Anthropic Skills Documentation](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-```
