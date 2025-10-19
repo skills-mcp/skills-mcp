@@ -854,14 +854,14 @@ Users can export instructions and add them to agent-specific configuration:
 **Recommended**: Use AGENTS.md (growing adoption as standard)
 
 ```bash
-npx skills-mcp instructions >> AGENTS.md
+npx -y skills-mcp instructions >> AGENTS.md
 ```
 
 **Alternative** for agents without AGENTS.md support:
 
 ```bash
 # Claude Code
-npx skills-mcp instructions >> CLAUDE.md
+npx -y skills-mcp instructions >> CLAUDE.md
 ```
 
 #### 3. Team Documentation

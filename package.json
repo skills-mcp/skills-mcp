@@ -1,6 +1,6 @@
 {
   "name": "skills-mcp",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Bring Claude's Skills pattern to any MCP-compatible agent",
   "type": "module",
   "main": "./build/index.js",

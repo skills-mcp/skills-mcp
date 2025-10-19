@@ -117,14 +117,14 @@ Want Skills MCP guidance always available in your agent's context? Export the in
 **Recommended**: Use [`AGENTS.md`](https://agents.md) for broad agent support:
 
 ```bash
-npx skills-mcp instructions >> AGENTS.md
+npx -y skills-mcp instructions >> AGENTS.md
 ```
 
 **For agents without `AGENTS.md` support**:
 
 ```bash
 # Claude Code
-npx skills-mcp instructions >> CLAUDE.md
+npx -y skills-mcp instructions >> CLAUDE.md
 ```
 
 ### When to Use Instructions File vs `/init-skills` Prompt

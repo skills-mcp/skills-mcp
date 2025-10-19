@@ -14,7 +14,7 @@ export function createServer(config: SkillsConfig): {
 } {
   const server = new McpServer({
     name: 'skills-mcp',
-    version: '0.0.3',
+    version: '0.0.4',
   })
 
   const skillRegistry = new SkillRegistry(config)
