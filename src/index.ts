@@ -6,7 +6,43 @@ import * as util from 'node:util'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { createServer } from './server.js'
+import {
+  getSkillsMCPInstructions,
+  instructionsCommandHelpText,
+} from './instructions.js'
 
+// Check if this is the instructions command
+const isInstructionsCommand = process.argv[2] === 'instructions'
+
+if (isInstructionsCommand) {
+  // Handle instructions command
+  const args = util.parseArgs({
+    // Skip 'node', 'script', and 'instructions'
+    args: process.argv.slice(3),
+    allowPositionals: true,
+    allowNegative: true,
+    options: {
+      xml: {
+        type: 'boolean',
+        default: true,
+      },
+      help: {
+        type: 'boolean',
+        default: false,
+      },
+    },
+  })
+
+  if (args.values.help) {
+    console.log(instructionsCommandHelpText)
+    process.exit(0)
+  }
+
+  console.log(getSkillsMCPInstructions(args.values.xml))
+  process.exit(0)
+}
+
+// Otherwise, parse server arguments
 const args = util.parseArgs({
   options: {
     'skills-dir': {

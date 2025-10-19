@@ -110,6 +110,30 @@ npx degit anthropics/skills/mcp-builder skills/mcp-builder
 
 These commands will download the skills directly into your `skills/` directory without any git history. Browse the [Anthropic skills repository](https://github.com/anthropics/skills) to see all available examples.
 
+## Agent Instructions Setup
+
+Want Skills MCP guidance always available in your agent's context? Export the instructions:
+
+**Recommended**: Use [`AGENTS.md`](https://agents.md) for broad agent support:
+
+```bash
+npx skills-mcp instructions >> AGENTS.md
+```
+
+**For agents without `AGENTS.md` support**:
+
+```bash
+# Claude Code
+npx skills-mcp instructions >> CLAUDE.md
+```
+
+### When to Use Instructions File vs `/init-skills` Prompt
+
+- **Use instructions export** if you want skills guidance always present in every conversation
+- **Use `/init-skills` prompt** if you want to minimize context usage and only load guidance when needed
+
+Both approaches use the same content—choose based on your preference for context management.
+
 ---
 
 ## Understanding Skills

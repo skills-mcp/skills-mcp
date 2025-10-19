@@ -820,6 +820,140 @@ Skills are designed to minimize context usage. Only load what you need, when you
 
 ---
 
+## Agent Instructions Export
+
+### Overview
+
+While the `/init-skills` prompt provides on-demand access to Skills MCP guidance, some users may prefer to have the instructions always present in their agent's context. The instructions export feature enables this workflow.
+
+### Command Interface
+
+```bash
+npx skills-mcp instructions [options]
+```
+
+**Purpose**: Output the Skills MCP usage guide to stdout, enabling users to save it to files for inclusion in agent instruction configurations.
+
+**Options**:
+
+- `--no-xml`: Disable XML tag wrapper. Default: false (XML tags included)
+- `--help`: Show help for the instructions command
+
+### Use Cases
+
+#### 1. Agent Custom Instructions
+
+Users can export instructions and add them to agent-specific configuration:
+
+- **Claude Desktop**: Custom instructions in settings
+- **ChatGPT**: Custom instructions in settings
+- **Other agents**: System prompts or configuration files
+
+#### 2. Project-Level Instructions
+
+**Recommended**: Use AGENTS.md (growing adoption as standard)
+
+```bash
+npx skills-mcp instructions >> AGENTS.md
+```
+
+**Alternative** for agents without AGENTS.md support:
+
+```bash
+# Claude Code
+npx skills-mcp instructions >> CLAUDE.md
+```
+
+#### 3. Team Documentation
+
+Teams can commit instructions to their repository for consistent agent setup across developers.
+
+### Design Decisions
+
+#### Why CLI Export vs API?
+
+**Decision**: Provide CLI command rather than MCP tool/resource
+
+**Rationale**:
+
+- Instructions are a one-time setup concern, not a runtime concern
+- CLI is the natural place for setup/configuration commands
+- Shell redirection (>>, >) is the idiomatic way to save command output
+- Keeps MCP server focused on runtime skill operations
+
+#### Why stdout vs File Writing?
+
+**Decision**: Output to stdout, let users handle file operations
+
+**Rationale**:
+
+- Maximum flexibility—users choose destination, filename, append vs overwrite
+- Shell redirection is familiar to developers
+- No need to guess project structure or file locations
+- Simpler implementation—no file system concerns
+- Composable with other shell tools (grep, sed, etc.)
+
+#### Content Source
+
+**Decision**: Share the same content between `/init-skills` prompt and `instructions` command
+
+**Rationale**:
+
+- Single source of truth for instructions
+- Consistency between on-demand and always-available approaches
+- Easier maintenance—update once, reflected everywhere
+- Users can choose their preferred workflow without content differences
+
+### Output Format
+
+**Default (with XML tags)**:
+
+Instructions are wrapped in `<skills-mcp-instructions>` XML tags to provide clear boundaries when appending to existing files:
+
+```markdown
+<skills-mcp-instructions>
+# Skills MCP - Usage Guide
+
+This is informational guidance about the Skills MCP...
+[full content]
+</skills-mcp-instructions>
+```
+
+**With `--no-xml`**:
+
+Plain markdown without XML wrapper:
+
+```markdown
+# Skills MCP - Usage Guide
+
+This is informational guidance about the Skills MCP...
+[full content]
+```
+
+### Implementation Notes
+
+The instructions content is extracted to a shared module (`src/instructions.ts`) and imported by both:
+
+- MCP server for the `/init-skills` prompt
+- CLI handler for the `instructions` command
+
+This ensures consistency and eliminates duplication.
+
+### Relationship to /init-skills Prompt
+
+These are complementary approaches serving different user preferences:
+
+| Aspect            | `/init-skills` Prompt     | `instructions` Export |
+| ----------------- | ------------------------- | --------------------- |
+| **Context usage** | Loaded on-demand          | Always present        |
+| **Setup effort**  | Run each session          | One-time setup        |
+| **User action**   | Must remember to run      | Automatic             |
+| **Best for**      | Minimizing context window | Seamless workflow     |
+
+Both use identical content—the difference is **when** and **how** the agent receives it.
+
+---
+
 ## References
 
 - [Anthropic Skills Documentation](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)
