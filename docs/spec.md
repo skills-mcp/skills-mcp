@@ -722,97 +722,25 @@ A prompt that provides informational guidance about working with the Skills MCP.
 - **Task-centric language**: Uses "task or objective" rather than "user request" to encompass both explicit user requests and autonomous agentic workflows
 - **Minimal wrapper philosophy**: Makes clear that the MCP only provides discovery and content access; agents handle all file operations
 
-**Content** (current implementation in `src/server.ts`):
+**Content Source**: The actual instructions content is maintained in `src/instructions.ts` as the single source of truth. This ensures consistency between the `/init-skills` prompt and the `instructions` CLI command. See that file for the current implementation.
 
-````markdown
-# Skills MCP - Usage Guide
+**Content Structure**: The instructions follow this organization:
 
-This is informational guidance about the Skills MCP. Do not take any action based on this message alone. Wait for a specific task or objective before using skills.
+- **Opening statement**: Explicitly informational, not directive
+- **What Are Skills**: Core concept explanation with skill components
+- **Core Design Philosophy**: Minimal wrapper principle and responsibility boundaries
+- **When to Use Skills**: Progressive disclosure model with clear loading criteria
+- **Working with Skills**: Five-step workflow from discovery to execution
+- **Important Notes**: Resource access responsibilities and progressive loading emphasis
+- **Closing reminder**: Positive framing of when to use skills
 
-## What Are Skills?
+**Key Design Characteristics** (reflected in `src/instructions.ts`):
 
-Skills are self-contained packages that provide you with specialized expertise for specific domains or tasks. Each skill contains:
-
-- **Instructions** (SKILL.md) - procedural knowledge and workflows
-- **References** - documentation you can read as needed
-- **Scripts** - executable code you can run using bash
-- **Assets** - templates and files for output generation
-
-## Core Design Philosophy
-
-The Skills MCP is a minimal wrapper that provides skill discovery and content access. You are responsible for all file operations:
-
-- **The MCP provides**: Skill metadata, SKILL.md content, and absolute file paths
-- **You handle**: Reading referenced files, executing scripts, navigating directories using your existing tools
-
-The absolute path returned by `get_skill` enables you to resolve any relative references within the skill.
-
-## When to Use Skills
-
-Skills follow a **progressive disclosure model**. Only load content when it's needed to accomplish a task:
-
-1. **Call `list_skills`** when you need to discover what skills are available (typically when a task might benefit from specialized expertise)
-2. **Call `get_skill`** only when a skill matches the specific task or objective at hand
-3. **Read referenced files** only when the skill instructions direct you to do so
-4. **Execute scripts** only when required by the workflow
-
-## Working with Skills
-
-### Step 1: Discovery
-
-Call `list_skills` to see available skills and their descriptions. Each skill description explains what it does and when to use it.
-
-### Step 2: Loading
-
-When a skill clearly matches the task at hand, call `get_skill` with the skill ID. This returns:
-
-- `path`: Absolute path to SKILL.md (e.g., `/path/to/skill/SKILL.md`)
-- `name`: Skill name
-- `description`: Skill description
-- `content`: Complete SKILL.md instructions
-
-### Step 3: Following Instructions
-
-Read and follow the instructions in the skill content. The skill will guide you through the workflow.
-
-### Step 4: Accessing Resources
-
-Skills may reference additional files like `references/guide.md` or `scripts/process.py`. To access these:
-
-1. Extract the directory path from the skill's absolute path
-   - Example: `/path/to/pdf-processing/SKILL.md` → `/path/to/pdf-processing/`
-2. Construct the full path to the referenced resource
-   - Example: `/path/to/pdf-processing/references/FORMS.md`
-3. Use your file-reading tools to access the file
-
-### Step 5: Executing Scripts
-
-When skills reference executable scripts, use your bash tool:
-
-```bash
-cd /path/to/skill-directory && python scripts/script_name.py
-```
-
-## Important Notes
-
-### Resource Access
-
-All resource access (references, scripts, assets) is your responsibility using your existing file-reading and bash tools. The Skills MCP only provides the starting point (the SKILL.md path).
-
-### Progressive Loading
-
-Skills are designed to minimize context usage. Only load what you need, when you need it. Load skills when they match the task at hand, and read references only as directed by the skill instructions.
-
----
-
-**Remember**: This is background information. Use skills when they align with the task or objective you're working on.
-````
-
-**Key Refinements** (October 2025):
-
-- **Opening statement**: Explicitly states this is informational guidance and not an action directive
-- **Task-centric**: Uses "task or objective" to include both user requests and agentic workflows
-- **Removed redundancy**: Consolidated progressive disclosure guidance into clear, non-repetitive sections
+- **Informational, not directive**: Opening statement explicitly establishes this is background context, not an action directive
+- **Task-centric language**: Uses "task or objective" to encompass both explicit user requests and autonomous agentic workflows
+- **Minimal wrapper emphasis**: Clearly communicates responsibility boundaries—MCP provides discovery/access, agents handle file operations
+- **Progressive disclosure**: Emphasizes loading content only when needed for specific tasks
+- **Five-step workflow**: Provides clear, actionable steps from discovery through execution
 - **Positive framing**: Final reminder uses positive language ("Use skills when...") rather than negative constraints
 - **Clarity over conciseness**: Prioritizes clear understanding over token minimization
 
