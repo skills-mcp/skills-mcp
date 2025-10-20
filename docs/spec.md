@@ -60,7 +60,9 @@ The server uses **stdio (standard input/output) transport** for communication wi
 
 ## What are Claude Skills?
 
-Agent Skills are modular, self-contained packages that extend Claude's functionality. Think of them as "onboarding guides" for specific domains or tasks—they transform general-purpose agents into specialized agents equipped with procedural knowledge that no model can fully possess.
+Agent Skills are modular, self-contained packages that extend Claude's functionality. **Think of them as "onboarding guides" for specific domains or tasks**—they transform general-purpose agents into specialized agents equipped with procedural knowledge that no model can fully possess.
+
+Building a skill is like putting together an onboarding guide for a new hire. Instead of building fragmented, custom-designed agents for each use case, anyone can now specialize their agents with composable capabilities by capturing and sharing their procedural knowledge.
 
 ### Why Skills Matter
 
@@ -78,7 +80,7 @@ Skills are reusable, filesystem-based resources that provide AI agents with doma
 - **Specialize agents**: Tailor capabilities for domain-specific tasks
 - **Reduce repetition**: Create once, use automatically
 - **Compose capabilities**: Combine Skills to build complex workflows
-- **Progressive disclosure**: Load information in stages as needed, rather than consuming context upfront
+- **Progressive disclosure**: Load information in stages as needed, rather than consuming context upfront—the core design principle that makes skills scalable
 
 ### Skills Characteristics
 
@@ -92,7 +94,9 @@ Skills are reusable, filesystem-based resources that provide AI agents with doma
 
 ## How Skills Work: Progressive Disclosure
 
-Skills leverage a filesystem-based architecture that enables **progressive disclosure**: AI agents load information in stages as needed, rather than consuming context upfront.
+**Progressive disclosure is the core design principle** that makes Agent Skills flexible and scalable. Like a well-organized manual that starts with a table of contents, then specific chapters, and finally a detailed appendix, skills let agents load information only as needed.
+
+Skills leverage a filesystem-based architecture that enables **progressive disclosure**: AI agents load information in stages as needed, rather than consuming context upfront. This means the amount of context that can be bundled into a skill is effectively unbounded, as agents don't need to read the entirety of a skill when working on a particular task.
 
 ### Three Levels of Content Loading
 
@@ -109,7 +113,9 @@ description: Extract text and tables from PDF files, fill forms, merge documents
 ---
 ```
 
-The agent loads this metadata at startup and includes it in the system prompt. This lightweight approach means you can install many Skills without context penalty; the agent only knows each Skill exists and when to use it.
+**In native Claude Skills**: The agent pre-loads this metadata at startup and includes it in the system prompt. This lightweight approach means you can install many Skills without context penalty; Claude only knows each Skill exists and when to use it.
+
+**In Skills MCP**: Because MCP operates through tool calls rather than native integration, agents discover skills by calling `list_skills`. This returns all skill metadata, which the agent can then keep visible in its context or re-query as needed throughout the conversation. While not pre-loaded at startup like native Claude, this approach maintains the same progressive disclosure principle—metadata is lightweight and always available for skill discovery.
 
 **Token cost**: ~100 tokens per Skill (~100 words)
 
@@ -170,7 +176,9 @@ pdf-skill/
 **Scripts (`scripts/`)**: Executable code for tasks requiring deterministic reliability or frequently rewritten operations.
 
 - **When to include**: When the same code is repeatedly rewritten or deterministic reliability is needed
-- **Benefits**: Token efficient, deterministic, may be executed without loading into context
+- **Benefits**: Token efficient, deterministic, **can be executed without loading into context**
+- **Reliability**: Code execution provides the deterministic reliability that certain operations require (e.g., sorting, form field extraction, file manipulation)
+- **Efficiency**: Operations like sorting a list or parsing structured data are far more efficient through code execution than token generation
 - **Note**: Scripts may still need to be read by the agent for patching or adjustments
 
 **Assets (`assets/`)**: Files not intended to be loaded into context, but used in the output the agent produces.
@@ -183,15 +191,40 @@ pdf-skill/
 
 ### Example: Loading a PDF Processing Skill
 
-Here's how an agent loads and uses a PDF processing skill:
+Here's how an agent loads and uses a PDF processing skill, showing how the context window evolves:
 
-1. **Startup**: System prompt includes: `PDF Processing - Extract text and tables from PDF files, fill forms, merge documents`
-2. **User request**: "Extract the text from this PDF and summarize it"
-3. **Agent invokes**: `bash: read pdf-skill/SKILL.md` → Instructions loaded into context
-4. **Agent determines**: Form filling is not needed, so FORMS.md is not read
-5. **Agent executes**: Uses instructions from SKILL.md to complete the task
+**Initial state**: Context contains the agent's system prompt and the user's message.
 
-This dynamic loading ensures only relevant skill content occupies the context window.
+1. **User request**: "Extract the text from this PDF and fill out the form"
+2. **Agent discovers skills**: Calls `list_skills` → receives metadata for all skills including: `PDF Processing - Extract text and tables from PDF files, fill forms, merge documents`
+3. **Agent triggers skill**: Calls `get_skill` with id `pdf-processing` → receives SKILL.md content and absolute path
+4. **Context updated**: SKILL.md instructions now loaded into context window
+5. **Agent reads reference**: Skill mentions `references/FORMS.md` for form filling → agent reads `/path/to/pdf-processing/references/FORMS.md` using its file-reading tool
+6. **Context updated**: FORMS.md content now loaded into context window
+7. **Agent executes script**: Skill includes `scripts/fill_form.py` → agent runs it using bash **without loading the script into context**
+8. **Agent completes task**: Uses the loaded instructions to finish the user's request
+
+This dynamic loading ensures only relevant skill content occupies the context window. The form extraction script never enters the context—it simply executes and returns results.
+
+### Skills MCP vs Native Claude Skills
+
+While this MCP implementation follows Anthropic's Skills pattern, there are important differences due to the nature of MCP:
+
+**Native Claude Skills** (as described in Anthropic's blog post):
+
+- Metadata pre-loaded at startup into system prompt
+- Skills are always "aware" to the agent without any tool calls
+- Tight integration with Claude's native capabilities
+
+**Skills MCP** (this implementation):
+
+- Metadata discovered via `list_skills` tool call
+- Agents query skills on-demand rather than having them pre-loaded
+- Works with any MCP-compatible agent, not just Claude
+
+**Key implication**: MCP agents need to proactively call `list_skills` to discover available skills, whereas native Claude has this information from the start. However, both implementations maintain the core progressive disclosure principle: lightweight metadata enables discovery, full content loads only when needed, and bundled resources load progressively as required.
+
+**Advantage of MCP approach**: Because skills aren't pre-loaded, agents with limited context windows can still access many skills without penalty. They only "pay" for what they actually use during a conversation.
 
 ---
 
@@ -347,12 +380,22 @@ The absolute path enables agents to resolve relative references within the skill
 
 ### Tool Discovery Flow
 
-**Initial conversation setup**:
+**Skill discovery pattern**:
 
-1. Agent calls `list_skills` (typically at conversation start or when user mentions tasks that might use skills)
-2. Server scans configured skills directory and returns metadata for all skills
-3. Agent matches user requests to skill descriptions and calls `get_skill` as needed
-4. Agent uses the returned absolute path to read additional resources referenced in the skill instructions
+Agents should consider skills throughout the conversation lifecycle, not just at initialization. The typical pattern:
+
+1. **Initial discovery**: Agent calls `list_skills` early in the conversation to understand available capabilities
+2. **Continuous evaluation**: As new tasks emerge, agent evaluates whether any skill descriptions match the current objective
+3. **Skill loading**: When a skill is relevant, agent calls `get_skill` to load instructions
+4. **Resource access**: Agent uses the returned absolute path to read additional resources referenced in the skill instructions
+
+**Agent responsibilities**:
+
+- **Initial discovery**: Call `list_skills` at conversation start to understand available capabilities
+- **Visibility awareness**: Call `list_skills` again if skills are no longer visible in context (this can occur for various reasons as conversations evolve)
+- **Continuous evaluation**: As new tasks or objectives emerge, evaluate whether any skill descriptions match the current objective
+- **Progressive loading**: Load skills only when needed by calling `get_skill` when a skill becomes relevant
+- **Resource resolution**: Use absolute paths to access references, scripts, and assets within skills
 
 **Example flow**:
 
@@ -366,11 +409,11 @@ User: "Extract text from this PDF"
 - Agent reads `/Users/username/.claude/skills/pdf-processing/references/FORMS.md` using its own file-reading tool
 - Agent executes any needed scripts using bash with paths relative to `/Users/username/.claude/skills/pdf-processing/`
 
-**Mid-conversation updates**:
+**Refresh behavior**:
 
 - Each tool call checks for staleness and refreshes the skill index if needed
-- Agent can call `list_skills` again to refresh if directed by user
 - No real-time notifications for new skills (agent discovers on next tool invocation)
+- Agents may call `list_skills` multiple times as conversation scope evolves
 
 ---
 
@@ -614,7 +657,7 @@ Lists all available skills with their metadata (Level 1: names and descriptions)
 ```typescript
 {
   name: "list_skills",
-  description: "List all available skills with their names and descriptions. Call this tool at the start of a conversation to discover available skills.",
+  description: "List all available skills with their names and descriptions. Skills are specialized packages of instructions, scripts, and resources for specific tasks. Use this to discover what skills are available.",
   inputSchema: {
     type: "object",
     properties: {},

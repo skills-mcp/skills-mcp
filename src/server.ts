@@ -14,7 +14,7 @@ export function createServer(config: SkillsConfig): {
 } {
   const server = new McpServer({
     name: 'skills-mcp',
-    version: '0.0.4',
+    version: '0.0.5',
   })
 
   const skillRegistry = new SkillRegistry(config)
@@ -25,7 +25,7 @@ export function createServer(config: SkillsConfig): {
     {
       title: 'List Skills',
       description:
-        'List all available skills with their names and descriptions. Call this tool at the start of a conversation to discover available skills.',
+        'List all available skills with their names and descriptions. Skills are specialized packages of instructions, scripts, and resources for specific tasks. Use this to discover what skills are available.',
       inputSchema: {},
       outputSchema: {
         skills: z.array(
