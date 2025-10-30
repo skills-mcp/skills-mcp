@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/skills-mcp-skills-mcp-badge.png)](https://mseep.ai/app/skills-mcp-skills-mcp)
+
 # Skills MCP
 
 Transform any AI agent into a domain expert by giving it access to modular, reusable skills through the Model Context Protocol.
