@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 
 import fg from 'fast-glob'
+import MiniSearch, { type SearchResult } from 'minisearch'
 
 import type { Skill, SkillEntry, SkillInfo, SkillsConfig } from './types.js'
 import { getSkillId, readSkillFile } from './parser.js'
@@ -13,12 +14,25 @@ export class SkillRegistry {
   private skills: Map<string, SkillEntry> = new Map()
   private config: SkillsConfig
   private lastScan: number = 0
+  private searchIndex?: MiniSearch
 
   constructor(config: SkillsConfig) {
     this.config = {
       ...config,
       stalenessThreshold:
         config.stalenessThreshold ?? DEFAULT_STALENESS_THRESHOLD,
+      enableSearch: config.enableSearch ?? true,
+    }
+
+    if (this.config.enableSearch) {
+      this.searchIndex = new MiniSearch({
+        fields: ['name', 'description', 'content'], // fields to index for full-text search
+        storeFields: ['id', 'name', 'description'], // fields to return with search results
+        searchOptions: {
+          boost: { name: 2 },
+          fuzzy: 0.2,
+        },
+      })
     }
   }
 
@@ -38,6 +52,9 @@ export class SkillRegistry {
 
     // Clear existing skills
     this.skills.clear()
+    if (this.searchIndex) {
+      this.searchIndex.removeAll()
+    }
 
     // Parse each skill file (metadata only)
     await Promise.all(
@@ -56,8 +73,7 @@ export class SkillRegistry {
           // Check for duplicate skill IDs
           if (this.skills.has(skillId)) {
             console.warn(
-              `Warning: Duplicate skill ID '${skillId}' found at ${skillFilePath}. Previous skill at ${
-                this.skills.get(skillId)?.info.path
+              `Warning: Duplicate skill ID '${skillId}' found at ${skillFilePath}. Previous skill at ${this.skills.get(skillId)?.info.path
               } will be overwritten.`,
             )
           }
@@ -75,6 +91,15 @@ export class SkillRegistry {
             info: skillInfo,
             lastChecked: Date.now(),
           })
+
+          if (this.searchIndex) {
+            this.searchIndex.add({
+              id: skillId,
+              name: skillInfo.metadata.name,
+              description: skillInfo.metadata.description,
+              content: skillFile.parsed.content,
+            })
+          }
         } catch (error) {
           console.error(`Failed to load skill from ${skillFilePath}:`, error)
         }
@@ -212,5 +237,15 @@ export class SkillRegistry {
    */
   getSkillsDirs(): string[] {
     return this.config.skillsDirs
+  }
+  /**
+   * Search skills using full-text search
+   */
+  searchSkills(query: string): SearchResult[] {
+    if (!this.searchIndex) {
+      return []
+    }
+
+    return this.searchIndex.search(query)
   }
 }
