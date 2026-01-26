@@ -44,11 +44,16 @@ if (isInstructionsCommand) {
 
 // Otherwise, parse server arguments
 const args = util.parseArgs({
+  allowNegative: true,
   options: {
     'skills-dir': {
       type: 'string',
       multiple: true,
       short: 's',
+    },
+    search: {
+      type: 'boolean',
+      default: true,
     },
   },
 })
@@ -86,7 +91,10 @@ async function main() {
   skillsDirs.forEach((dir) => console.error(`  - ${dir}`))
 
   // Create the MCP server
-  const { server, skillRegistry } = createServer({ skillsDirs })
+  const { server, skillRegistry } = createServer({
+    skillsDirs,
+    enableSearch: args.values.search
+  })
 
   // Initial scan of skills directory
   console.error(`Scanning skills directory...`)

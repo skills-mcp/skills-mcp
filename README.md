@@ -275,6 +275,14 @@ npx skills-mcp --skills-dir /absolute/path/to/skills
 
 The server will start and wait for JSON-RPC messages on stdin. Press `Ctrl+C` to stop the server.
 
+### Enabling/Disabling Search
+
+The full-text search feature is enabled by default. To disable it, use the `--no-search` flag:
+
+```bash
+npx skills-mcp --skills-dir /path/to/skills --no-search
+```
+
 </details>
 
 <details>
@@ -319,7 +327,40 @@ Lists all available skills with their metadata.
 }
 ```
 
+    }
+  ]
+}
+```
+
+### `search_skills`
+
+Semantically searches for skills using their name, description, and content.
+
+**Input:**
+
+```json
+{
+  "query": "pdf extraction"
+}
+```
+
+**Output:**
+
+```json
+{
+  "skills": [
+    {
+      "id": "pdf-processing",
+      "name": "PDF Processing",
+      "description": "Extract text...",
+      "score": 4.5
+    }
+  ]
+}
+```
+
 ### `get_skill`
+
 
 Retrieves the full skill content and absolute path.
 

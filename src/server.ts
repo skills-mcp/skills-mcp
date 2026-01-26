@@ -114,6 +114,58 @@ export function createServer(config: SkillsConfig): {
     },
   )
 
+
+
+  // Register search_skills tool
+  if (config.enableSearch !== false) {
+    server.registerTool(
+      'search_skills',
+      {
+        title: 'Search Skills',
+        description:
+          'Search for skills using a semantic-ish query. Uses BM25 full-text search over skill names, descriptions, and content. Returns a list of matching skills with relevance scores.',
+        inputSchema: {
+          query: z.string().describe('The search query'),
+        },
+        outputSchema: {
+          skills: z.array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              description: z.string(),
+              score: z.number(),
+            }),
+          ),
+        },
+      },
+      async (args) => {
+        // Refresh registry if stale
+        await skillRegistry.refreshIfStale()
+
+        const results = skillRegistry.searchSkills(args.query)
+
+        const output = {
+          skills: results.map((result) => ({
+            id: result.id,
+            name: result.name,
+            description: result.description,
+            score: result.score,
+          })),
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(output, null, 2),
+            },
+          ],
+          structuredContent: output,
+        }
+      },
+    )
+  }
+
   // Register init-skills prompt
   server.registerPrompt(
     'init-skills',

@@ -31,4 +31,5 @@ export interface SkillEntry {
 export interface SkillsConfig {
   skillsDirs: string[]
   stalenessThreshold?: number // milliseconds
+  enableSearch?: boolean
 }
